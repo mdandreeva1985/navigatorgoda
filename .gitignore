@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 deno.lock
 supabase/.temp/
+
+# Database exports (personal data)
+navigator-export-*.json
+*.export.json
