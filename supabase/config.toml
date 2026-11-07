@@ -1,0 +1,16 @@
+project_id = "htqltjtwakaokexziypr"
+
+[functions.external-db]
+verify_jwt = false
+
+[functions.init-schema]
+verify_jwt = false
+
+[functions.setup-admin]
+verify_jwt = false
+
+[functions.custom-auth]
+verify_jwt = false
+
+[functions.push-notifications]
+verify_jwt = false

@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793597988638,
+      "tag": "0000_create_life_navigator_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793601099653,
+      "tag": "0001_preserve_imported_task_creator",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793601171686,
+      "tag": "0002_allow_scoped_timeweb_data_import",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793601193317,
+      "tag": "0003_scope_import_grants_to_exec_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793601211456,
+      "tag": "0004_close_temporary_import_access",
+      "breakpoints": true
+    }
+  ]
+}

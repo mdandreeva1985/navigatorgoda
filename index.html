@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Навигатор</title>
+    <meta name="description" content="Навигатор - ваш персональный планировщик на 2026 год" />
+    <meta name="author" content="Навигатор" />
+    <link rel="icon" type="image/png" href="%BASE_URL%logo-2026.png" />
+    <link rel="apple-touch-icon" href="%BASE_URL%logo-2026.png" />
+    <link rel="manifest" href="%BASE_URL%manifest.json" />
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
+    <link rel="dns-prefetch" href="%VITE_SUPABASE_URL%" />
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Навигатор" />
+    <meta property="og:title" content="Навигатор" />
+    <meta property="og:description" content="Навигатор - ваш персональный планировщик на 2026 год" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="%BASE_URL%logo-2026.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:image" content="%BASE_URL%logo-2026.png" />
+  </head>
+
+  <body>
+    <div id="root"><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff"><div style="width:40px;height:40px;border:4px solid #e5e7eb;border-top-color:#6366f1;border-radius:50%;animation:boot-spin .8s linear infinite"></div></div></div>
+    <style>@keyframes boot-spin{to{transform:rotate(360deg)}}</style>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

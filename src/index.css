@@ -1,0 +1,338 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 20% 99%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 240 10% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 240 100% 97%;
+    --accent-foreground: 239 84% 67%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --success-muted: 142 76% 95%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --warning-muted: 38 92% 95%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 239 84% 67%;
+
+    --radius: 1.5rem;
+
+    /* Custom app tokens */
+    --nav-height: 5.5rem;
+    --container-max: 28rem;
+    
+    /* Shadows */
+    --shadow-card: 0 4px 20px -4px hsl(239 84% 67% / 0.08);
+    --shadow-elevated: 0 8px 30px -8px hsl(239 84% 67% / 0.15);
+    --shadow-nav: 0 -15px 50px hsl(0 0% 0% / 0.06);
+    --shadow-focus: 0 0 0 3px hsl(239 84% 67% / 0.2);
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(280 80% 60%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(160 84% 39%) 100%);
+  }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 239 50% 20%;
+    --accent-foreground: 239 84% 80%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142 76% 30%;
+    --success-foreground: 210 40% 98%;
+    --success-muted: 142 30% 15%;
+
+    --warning: 38 92% 40%;
+    --warning-foreground: 210 40% 98%;
+    --warning-muted: 38 30% 15%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 239 84% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer components {
+  /* App container */
+  .app-container {
+    @apply min-h-screen max-w-[var(--container-max)] mx-auto relative;
+    @apply bg-background shadow-2xl ring-1 ring-border/50;
+  }
+
+  /* Focus card - hero element */
+  .focus-card {
+    @apply rounded-[30px] p-6 text-primary-foreground relative overflow-hidden;
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  /* Navigation bar */
+  .nav-bar {
+    @apply fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[var(--container-max)];
+    @apply bg-card/95 backdrop-blur-xl border-t border-border;
+    @apply px-6 py-3 z-[150] flex justify-between items-center;
+    @apply rounded-t-[30px];
+    box-shadow: var(--shadow-nav);
+  }
+
+  .nav-item {
+    @apply flex flex-col items-center gap-1.5 transition-all duration-300;
+  }
+
+  .nav-item-active {
+    @apply text-primary scale-110 -translate-y-1;
+  }
+
+  .nav-item-inactive {
+    @apply text-muted-foreground/50 hover:text-muted-foreground;
+  }
+
+  /* Cards */
+  .card-soft {
+    @apply bg-card rounded-[28px] border border-border/50 p-5;
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-interactive {
+    @apply card-soft transition-all active:scale-[0.98];
+  }
+
+  /* List items */
+  .list-item {
+    @apply flex items-center justify-between p-3.5 bg-card rounded-2xl;
+    @apply border border-border/50 shadow-sm mb-2 transition-all active:scale-[0.98];
+  }
+
+  /* Buttons */
+  .btn-icon {
+    @apply p-3 bg-card border border-border/50 rounded-2xl shadow-sm;
+    @apply transition-all active:scale-90;
+  }
+
+  .btn-fab {
+    @apply w-16 h-16 bg-card rounded-full flex items-center justify-center;
+    @apply text-primary border border-border/30 shadow-sm;
+    @apply active:scale-90 transition-all;
+    animation: shadowPulse 2.5s infinite ease-in-out;
+  }
+
+  /* Calendar */
+  .calendar-day {
+    @apply aspect-square rounded-2xl flex items-center justify-center text-sm;
+    @apply relative shadow-sm font-bold transition-all;
+  }
+
+  .calendar-day-default {
+    @apply bg-card border border-border/30 text-foreground;
+  }
+
+  .calendar-day-current {
+    @apply bg-primary text-primary-foreground shadow-primary/20 ring-2 ring-primary/20;
+  }
+
+  .calendar-day-selected {
+    @apply ring-2 ring-primary ring-offset-2 scale-105;
+  }
+
+  .calendar-day-filtered {
+    @apply bg-accent border-primary/30 text-primary;
+  }
+
+  .calendar-day-dimmed {
+    @apply opacity-10 text-muted-foreground;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    @apply fixed inset-0 bg-foreground/60 z-[200];
+    @apply flex items-center justify-center p-6;
+    @apply animate-in fade-in duration-200;
+  }
+
+  .modal-content {
+    @apply bg-card w-full max-w-xs rounded-[32px] p-6;
+    @apply shadow-2xl border border-border/50;
+    @apply animate-in zoom-in-95 duration-300;
+  }
+
+  /* Progress ring */
+  .progress-ring {
+    @apply relative flex items-center justify-center;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply bg-card p-5 rounded-[30px] border border-border/50 shadow-sm;
+    @apply flex flex-col items-center text-center;
+  }
+
+  /* Input */
+  .input-soft {
+    @apply w-full p-4 bg-muted border-none rounded-2xl text-sm;
+    @apply outline-none shadow-inner transition-all;
+    @apply focus:ring-1 focus:ring-primary/30;
+  }
+
+  /* Tab switcher */
+  .tab-switcher {
+    @apply flex bg-muted/50 p-1 rounded-2xl;
+  }
+
+  .tab-button {
+    @apply flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all text-center;
+  }
+
+  .tab-button-active {
+    @apply bg-card text-primary shadow-sm;
+  }
+
+  .tab-button-inactive {
+    @apply text-muted-foreground;
+  }
+
+  /* Achievement item */
+  .achievement-item {
+    @apply p-5 rounded-[28px] border shadow-sm flex gap-4 items-start;
+    @apply bg-gradient-to-br from-accent/50 to-card;
+    @apply border-primary/20;
+  }
+
+  /* Subscription card */
+  .subscription-card {
+    @apply p-7 rounded-[35px] border flex flex-col relative overflow-hidden;
+    @apply bg-success-muted border-success/30 text-success;
+  }
+}
+
+@layer utilities {
+  /* Animations */
+  @keyframes shadowPulse {
+    0% { box-shadow: 0 0 5px hsl(280 80% 60% / 0.2); }
+    50% { box-shadow: 0 0 25px hsl(280 80% 60% / 0.5); }
+    100% { box-shadow: 0 0 5px hsl(280 80% 60% / 0.2); }
+  }
+
+  .animate-shadow-pulse {
+    animation: shadowPulse 2.5s infinite ease-in-out;
+  }
+
+  /* Confetti celebration */
+  @keyframes confettiFall {
+    0% {
+      transform: translateY(0) rotate(0deg) scale(1);
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100vh) rotate(720deg) scale(0.5);
+      opacity: 0;
+    }
+  }
+
+  @keyframes praisePopIn {
+    0% {
+      transform: scale(0) rotate(-5deg);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.1) rotate(2deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes praisePulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  .confetti-particle {
+    animation: confettiFall ease-out forwards;
+  }
+
+  .praise-text {
+    animation: praisePopIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, praisePulse 1s ease-in-out 0.6s infinite;
+  }
+
+  /* Text utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+}

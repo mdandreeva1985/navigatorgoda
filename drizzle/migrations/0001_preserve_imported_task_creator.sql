@@ -1,0 +1,1 @@
+ALTER TABLE life_navigator.tasks ADD COLUMN IF NOT EXISTS created_by UUID;
