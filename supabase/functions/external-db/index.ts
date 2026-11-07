@@ -1,6 +1,19 @@
 import postgres from "https://deno.land/x/postgresjs@v3.4.4/mod.js";
 import { jwtVerify } from "https://deno.land/x/jose@v4.15.4/index.ts";
 import { getDbConnection } from "../_shared/database.ts";
+import { BadRequest, runUserOp } from "../_shared/userOps.ts";
+
+async function isAdmin(userId: string): Promise<boolean> {
+  const sql = getDbConnection();
+  try {
+    const roles = await sql`
+      SELECT 1 FROM life_navigator.user_roles
+      WHERE user_id = ${userId}::uuid AND role = 'admin'`;
+    return roles.length > 0;
+  } finally {
+    await sql.end();
+  }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -157,7 +170,36 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Execute query
+    // Fixed, per-user planner changes (tasks, habits, achievements, goals).
+    if (action === "user-op" && req.method === "POST") {
+      const { op, args } = await req.json();
+      const sql = getDbConnection();
+      try {
+        const data = await runUserOp(sql, userId, String(op), (args ?? {}) as Record<string, unknown>);
+        return new Response(JSON.stringify({ data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        if (err instanceof BadRequest) {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        throw err;
+      } finally {
+        await sql.end();
+      }
+    }
+
+    // Raw SQL and schema changes are for the admin panel only.
+    if ((action === "query" || action === "migrate") && !(await isAdmin(userId))) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Execute query (admin only)
     if (action === "query" && req.method === "POST") {
       const { query, params } = await req.json();
       

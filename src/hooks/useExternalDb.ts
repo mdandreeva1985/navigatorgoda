@@ -46,6 +46,27 @@ export const useExternalDb = () => {
     return result.data as T[];
   }, []);
 
+  // Planner changes by regular users: a named operation the server runs on the
+  // caller's own rows only (raw SQL via `query` is reserved for admins).
+  const userOp = useCallback(async <T = unknown>(op: string, args: Record<string, unknown>): Promise<T[]> => {
+    const response = await fetch(`${FUNCTION_URL}?action=user-op`, {
+      method: 'POST',
+      headers: {
+        'Authorization': getAuthHeader(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ op, args }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Operation failed');
+    }
+
+    return result.data as T[];
+  }, []);
+
   const getBootstrap = useCallback(<T,>(): Promise<T> => fetchBootstrap<T>(), []);
 
   const getProfile = async () => {
@@ -135,6 +156,7 @@ export const useExternalDb = () => {
   return {
     getBootstrap,
     query,
+    userOp,
     getProfile,
     upsertProfile,
     checkIsAdmin,

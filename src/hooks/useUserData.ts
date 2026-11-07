@@ -201,7 +201,7 @@ export interface UserDataSnapshot {
 }
 
 export const useUserData = () => {
-  const { query, getBootstrap, upsertProfile } = useExternalDb();
+  const { userOp, getBootstrap, upsertProfile } = useExternalDb();
   const [accountId] = useState(getCachedAccountId);
   const [cached] = useState(() => {
     const data = readUserDataCache<UserDataSnapshot>(accountId);
@@ -278,35 +278,12 @@ export const useUserData = () => {
     });
   }, [loading, accountId, profile, tasks, habits, habitCompletions, dailyEnergy, baziChart, monthlyEvents, userHint, individualForecasts, generalForecast, achievements, userGoals, stemToStemRules, stemToBranchRules, dayBranchRules, yearBranchRules, monthBranchRules]);
 
-  // Task operations
+  // Task operations. Every change goes through a named server operation that only
+  // touches the signed-in user's own rows.
   const addTask = useCallback(async (text: string, date: string, recurringGroupId?: string) => {
     if (!profile) return null;
     try {
-      // Try with recurring_group_id first, fall back to without if column doesn't exist
-      let result: DbTask[];
-      if (recurringGroupId) {
-        try {
-          result = await query<DbTask>(
-            `INSERT INTO life_navigator.tasks (user_id, text, date, completed, recurring_group_id)
-             VALUES ('${profile.id}', '${text.replace(/'/g, "''")}', '${date}', false, '${recurringGroupId}')
-             RETURNING *`
-          );
-        } catch (err) {
-          // Column might not exist yet, try without it
-          console.log('Falling back to INSERT without recurring_group_id');
-          result = await query<DbTask>(
-            `INSERT INTO life_navigator.tasks (user_id, text, date, completed)
-             VALUES ('${profile.id}', '${text.replace(/'/g, "''")}', '${date}', false)
-             RETURNING *`
-          );
-        }
-      } else {
-        result = await query<DbTask>(
-          `INSERT INTO life_navigator.tasks (user_id, text, date, completed)
-           VALUES ('${profile.id}', '${text.replace(/'/g, "''")}', '${date}', false)
-           RETURNING *`
-        );
-      }
+      const result = await userOp<DbTask>('add-task', { text, date, recurringGroupId: recurringGroupId ?? null });
       if (result[0]) {
         setTasks(prev => [...prev, result[0]]);
         return result[0];
@@ -316,74 +293,67 @@ export const useUserData = () => {
       console.error('Error adding task:', err);
       return null;
     }
-  }, [profile, query]);
+  }, [profile, userOp]);
 
   const toggleTask = useCallback(async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-    
+
     try {
-      await query(
-        `UPDATE life_navigator.tasks SET completed = ${!task.completed} WHERE id = '${taskId}'`
-      );
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t));
+      const result = await userOp<DbTask>('toggle-task', { taskId });
+      const completed = result[0]?.completed ?? !task.completed;
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed } : t));
     } catch (err) {
       console.error('Error toggling task:', err);
     }
-  }, [tasks, query]);
+  }, [tasks, userOp]);
 
   const deleteTask = useCallback(async (taskId: string, deleteAll: boolean = true) => {
     try {
       const task = tasks.find(t => t.id === taskId);
-      
+
       // If task has a recurring group and deleteAll is true, delete all tasks in the group
       if (deleteAll && task?.recurring_group_id) {
-        await query(`DELETE FROM life_navigator.tasks WHERE recurring_group_id = '${task.recurring_group_id}'`);
+        await userOp('delete-task', { recurringGroupId: task.recurring_group_id });
         setTasks(prev => prev.filter(t => t.recurring_group_id !== task.recurring_group_id));
       } else {
-        await query(`DELETE FROM life_navigator.tasks WHERE id = '${taskId}'`);
+        await userOp('delete-task', { taskId });
         setTasks(prev => prev.filter(t => t.id !== taskId));
       }
     } catch (err) {
       console.error('Error deleting task:', err);
     }
-  }, [query, tasks]);
+  }, [userOp, tasks]);
 
   const updateTask = useCallback(async (taskId: string, newText: string) => {
     try {
-      await query(
-        `UPDATE life_navigator.tasks SET text = '${newText.replace(/'/g, "''")}' WHERE id = '${taskId}'`
-      );
+      await userOp('update-task', { taskId, text: newText });
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, text: newText } : t));
     } catch (err) {
       console.error('Error updating task:', err);
     }
-  }, [query]);
+  }, [userOp]);
 
   // Habit operations
   const addHabit = useCallback(async (text: string, startDate: string, repeat: 'week' | 'month' | '3months' | 'year') => {
     if (!profile) return null;
-    
+
     // Calculate end date
     const [year, month, day] = startDate.split('-').map(Number);
     const start = new Date(year, month - 1, day);
-    let end = new Date(start);
-    
+    const end = new Date(start);
+
     switch (repeat) {
       case 'week': end.setDate(start.getDate() + 6); break;
       case 'month': end.setMonth(start.getMonth() + 1); end.setDate(end.getDate() - 1); break;
       case '3months': end.setMonth(start.getMonth() + 3); end.setDate(end.getDate() - 1); break;
       case 'year': end.setFullYear(start.getFullYear() + 1); end.setDate(end.getDate() - 1); break;
     }
-    
+
     const endDateStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
-    
+
     try {
-      const result = await query<DbHabit>(
-        `INSERT INTO life_navigator.habits (user_id, text, start_date, end_date, repeat)
-         VALUES ('${profile.id}', '${text.replace(/'/g, "''")}', '${startDate}', '${endDateStr}', '${repeat}')
-         RETURNING *`
-      );
+      const result = await userOp<DbHabit>('add-habit', { text, startDate, endDate: endDateStr, repeat });
       if (result[0]) {
         setHabits(prev => [...prev, result[0]]);
         return result[0];
@@ -393,20 +363,18 @@ export const useUserData = () => {
       console.error('Error adding habit:', err);
       return null;
     }
-  }, [profile, query]);
+  }, [profile, userOp]);
 
   const toggleHabit = useCallback(async (habitId: string, date: string) => {
     const normalizedDate = date.split('T')[0];
     const isCompleted = habitCompletions.some(c => c.habit_id === habitId && c.date.split('T')[0] === normalizedDate);
-    
+
     try {
       if (isCompleted) {
-        await query(`DELETE FROM life_navigator.habit_completions WHERE habit_id = '${habitId}' AND date = '${normalizedDate}'`);
+        await userOp('set-habit-completion', { habitId, date: normalizedDate, completed: false });
         setHabitCompletions(prev => prev.filter(c => !(c.habit_id === habitId && c.date.split('T')[0] === normalizedDate)));
       } else {
-        const result = await query<DbHabitCompletion>(
-          `INSERT INTO life_navigator.habit_completions (habit_id, date) VALUES ('${habitId}', '${date}') RETURNING *`
-        );
+        const result = await userOp<DbHabitCompletion>('set-habit-completion', { habitId, date: normalizedDate, completed: true });
         if (result[0]) {
           setHabitCompletions(prev => [...prev, result[0]]);
         }
@@ -414,48 +382,37 @@ export const useUserData = () => {
     } catch (err) {
       console.error('Error toggling habit:', err);
     }
-  }, [habitCompletions, query]);
+  }, [habitCompletions, userOp]);
 
   const deleteHabit = useCallback(async (habitId: string) => {
     try {
-      await query(`DELETE FROM life_navigator.habits WHERE id = '${habitId}'`);
+      await userOp('delete-habit', { habitId });
       setHabits(prev => prev.filter(h => h.id !== habitId));
       setHabitCompletions(prev => prev.filter(c => c.habit_id !== habitId));
     } catch (err) {
       console.error('Error deleting habit:', err);
     }
-  }, [query]);
+  }, [userOp]);
 
   const updateHabit = useCallback(async (habitId: string, newText: string) => {
     try {
-      await query(
-        `UPDATE life_navigator.habits SET text = '${newText.replace(/'/g, "''")}' WHERE id = '${habitId}'`
-      );
+      await userOp('update-habit', { habitId, text: newText });
       setHabits(prev => prev.map(h => h.id === habitId ? { ...h, text: newText } : h));
     } catch (err) {
       console.error('Error updating habit:', err);
     }
-  }, [query]);
+  }, [userOp]);
 
   // Achievement operations
   const saveAchievement = useCallback(async (date: string, achievement1: string, achievement2: string, achievement3: string) => {
     if (!profile) return;
 
     const safeDate = normalizeDate(date);
-    
+
     try {
-      const result = await query<DbAchievement>(
-        `INSERT INTO life_navigator.achievements (user_id, date, achievement_1, achievement_2, achievement_3)
-         VALUES ('${profile.id}', '${safeDate}', 
-           ${achievement1 ? `'${achievement1.replace(/'/g, "''")}'` : 'NULL'},
-           ${achievement2 ? `'${achievement2.replace(/'/g, "''")}'` : 'NULL'},
-           ${achievement3 ? `'${achievement3.replace(/'/g, "''")}'` : 'NULL'})
-         ON CONFLICT (user_id, date) DO UPDATE SET
-           achievement_1 = EXCLUDED.achievement_1,
-           achievement_2 = EXCLUDED.achievement_2,
-           achievement_3 = EXCLUDED.achievement_3
-         RETURNING *`
-      );
+      const result = await userOp<DbAchievement>('save-achievement', {
+        date: safeDate, achievement1, achievement2, achievement3,
+      });
       if (result[0]) {
         const normalized = normalizeDate(result[0].date);
         setAchievements((prev) => {
@@ -466,66 +423,15 @@ export const useUserData = () => {
     } catch (err) {
       console.error('Error saving achievement:', err);
     }
-  }, [profile, query]);
-
-  // Ensure user_goals table exists (creates it if missing)
-  const ensureUserGoalsTable = useCallback(async () => {
-    try {
-      await query(`
-        CREATE TABLE IF NOT EXISTS life_navigator.user_goals (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL REFERENCES life_navigator.profiles(id) ON DELETE CASCADE,
-          type VARCHAR(10) NOT NULL CHECK (type IN ('year', 'month')),
-          year INT NOT NULL,
-          month INT,
-          goal_text TEXT,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-          UNIQUE(user_id, type, year, month)
-        )
-      `);
-    } catch (err) {
-      // Table likely already exists, ignore error
-      console.log('User goals table check:', err);
-    }
-  }, [query]);
+  }, [profile, userOp]);
 
   // Year/Month goal operations (using user_goals table - separate from admin's forecasts)
   const saveYearGoal = useCallback(async (goal: string) => {
     if (!profile) return;
     const currentYear = new Date().getFullYear();
-    
+
     try {
-      // Ensure table exists first
-      await ensureUserGoalsTable();
-
-      const safeGoal = goal.replace(/'/g, "''");
-
-      // IMPORTANT: month is NULL for year goals. A UNIQUE(user_id,type,year,month) constraint
-      // does NOT prevent duplicates with NULL month, so we update the latest existing row if present.
-      const updated = await query<DbUserGoal>(
-        `UPDATE life_navigator.user_goals
-         SET goal_text = '${safeGoal}', updated_at = now()
-         WHERE id = (
-           SELECT id FROM life_navigator.user_goals
-           WHERE user_id = '${profile.id}' AND type = 'year' AND year = ${currentYear} AND month IS NULL
-           ORDER BY updated_at DESC NULLS LAST, created_at DESC
-           LIMIT 1
-         )
-         RETURNING *`
-      );
-
-      const row = updated[0];
-
-      // If there was no existing row, insert a new one
-      const result = row
-        ? [row]
-        : await query<DbUserGoal>(
-            `INSERT INTO life_navigator.user_goals (user_id, type, year, month, goal_text)
-             VALUES ('${profile.id}', 'year', ${currentYear}, NULL, '${safeGoal}')
-             RETURNING *`
-          );
-
+      const result = await userOp<DbUserGoal>('save-year-goal', { year: currentYear, goal });
       if (result[0]) {
         setUserGoals(prev => {
           const updated = prev.filter(g => !(g.type === 'year' && g.year === currentYear && g.month === null));
@@ -535,24 +441,14 @@ export const useUserData = () => {
     } catch (err) {
       console.error('Error saving year goal:', err);
     }
-  }, [profile, query, ensureUserGoalsTable]);
+  }, [profile, userOp]);
 
   const saveMonthGoal = useCallback(async (monthIndex: number, goal: string) => {
     if (!profile) return;
     const currentYear = new Date().getFullYear();
-    
+
     try {
-      // Ensure table exists first
-      await ensureUserGoalsTable();
-      
-      const result = await query<DbUserGoal>(
-        `INSERT INTO life_navigator.user_goals (user_id, type, year, month, goal_text)
-         VALUES ('${profile.id}', 'month', ${currentYear}, ${monthIndex + 1}, '${goal.replace(/'/g, "''")}')
-         ON CONFLICT (user_id, type, year, month) DO UPDATE SET
-           goal_text = EXCLUDED.goal_text,
-           updated_at = now()
-         RETURNING *`
-      );
+      const result = await userOp<DbUserGoal>('save-month-goal', { year: currentYear, month: monthIndex + 1, goal });
       if (result[0]) {
         setUserGoals(prev => {
           const updated = prev.filter(g => !(g.type === 'month' && g.year === currentYear && g.month === monthIndex + 1));
@@ -562,7 +458,7 @@ export const useUserData = () => {
     } catch (err) {
       console.error('Error saving month goal:', err);
     }
-  }, [profile, query, ensureUserGoalsTable]);
+  }, [profile, userOp]);
 
   // Helper to get user's year goal (from user_goals table)
   const getYearGoal = useCallback(() => {
